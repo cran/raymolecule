@@ -77,12 +77,14 @@ render_model = function(scene, fov = NULL, angle = c(0,0,0), order_rotation = c(
   }
   pathtraced = suppressWarnings(is.null(scene$vertices))
   if(pathtraced) {
-    scene_model = scene[is.na(scene$lightintensity) &
+    is_not_light = unlist(lapply(scene$material, \(x) x$type)) != "light"
+
+    scene_model = scene[is_not_light &
                         (scene$shape == "cylinder" | scene$shape == "sphere"),]
     bbox_x = range(scene_model$x,na.rm=TRUE)
     bbox_y = range(scene_model$y,na.rm=TRUE)
     bbox_z = range(scene_model$z,na.rm=TRUE)
-    spheresizes = scene[(scene$shape == "sphere" & scene$type != "light"),4]
+    spheresizes = unlist(lapply(scene$shape_info, \(x) x[[1]]$radius))[is_not_light]
     if(length(spheresizes) > 0) {
       max_sphere_radii = max(spheresizes,na.rm=TRUE)
     } else {
@@ -92,9 +94,14 @@ render_model = function(scene, fov = NULL, angle = c(0,0,0), order_rotation = c(
     widest = max(c(abs(bbox_x),abs(bbox_y),abs(bbox_z)))
     offset_dist = widest + widest/5 + max_sphere_radii
   } else {
-    bbox_x = range(scene$vertices[,1],na.rm=TRUE)
-    bbox_y = range(scene$vertices[,2],na.rm=TRUE)
-    bbox_z = range(scene$vertices[,3],na.rm=TRUE)
+    bbox_x = c()
+    bbox_y = c()
+    bbox_z = c()
+    for(vert in seq_len(length(scene$vertices))) {
+      bbox_x = range(c(bbox_x, range(scene$vertices[[vert]][,1],na.rm=TRUE)))
+      bbox_y = range(c(bbox_y, range(scene$vertices[[vert]][,2],na.rm=TRUE)))
+      bbox_z = range(c(bbox_z, range(scene$vertices[[vert]][,3],na.rm=TRUE)))
+    }
     widest = max(c(abs(bbox_x),abs(bbox_y),abs(bbox_z)))
     max_sphere_radii = 0
   }
